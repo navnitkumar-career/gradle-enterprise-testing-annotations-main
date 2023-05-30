@@ -1,0 +1,206 @@
+= Gradle Enterprise Testing Annotations
+
+Common annotations for https://gradle.com/[Gradle Enterprise]'s
+https://docs.gradle.com/enterprise/predictive-test-selection/[Predictive Test Selection] and
+https://docs.gradle.com/enterprise/test-distribution/[Test Distribution] as well as
+the standalone https://github.com/gradle/test-retry-gradle-plugin[Test Retry Plugin].
+
+== Annotations
+
+All annotations have an optional `because` attribute to explain why the annotation is present.
+The annotations are located in the `com.gradle.enterprise.testing.annotations` package.
+
+=== Predictive Test Selection
+
+* `@MustRun` - indicates that the test must be run.
+
+=== Test Distribution
+
+* `@LocalOnly` - indicates that the test must be run locally.
+* `@RemoteOnly` - indicates that the test must be run remotely.
+
+=== Test Retry Plugin
+
+* `@Retryable` - indicates that the test should be retried.
+* `@NonRetryable` - indicates that the test must not be retried.
+* `@ClassRetry` - indicates that the test class must be retried as a whole unit
+
+== Usage
+
+.Gradle
+[source,kotlin]
+----
+testImplementation("com.gradle:gradle-enterprise-testing-annotations:1.1")
+----
+
+.Maven
+[source,xml]
+----
+<dependency>
+    <groupId>com.gradle</groupId>
+    <artifactId>gradle-enterprise-testing-annotations</artifactId>
+    <version>1.1</version>
+    <scope>test</scope>
+</dependency>
+----
+
+== Configuration
+
+=== Predictive Test Selection
+The Gradle Enterprise Gradle plugin version 3.12 or higher has built-in support for the `@MustRun` annotation.
+
+For Gradle see https://docs.gradle.com/enterprise/predictive-test-selection/#must_run_annotation_matcher[Must Run Annotation Matcher] chapter for details.
+
+[source,kotlin]
+----
+tasks.test {
+    useJUnitPlatform()
+    predictiveSelection {
+        enabled.set(true)
+        mustRun {
+            includeAnnotationClasses.add("com.gradle.enterprise.testing.annotations.MustRun")
+        }
+    }
+}
+----
+
+The Gradle Enterprise Maven extension version 1.16 or higher has built-in support for the `@MustRun` annotation.
+
+For Maven see the https://docs.gradle.com/enterprise/predictive-test-selection/#must_run_annotation_matcher_2[Must Run Annotation Matcher] chapter for details.
+
+[source,xml]
+----
+<plugin>
+  <artifactId>maven-surefire-plugin</artifactId>
+  <version>3.0.0-M7</version>
+  <configuration>
+    <properties>
+      <predictiveSelection>
+        <enabled>true</enabled>
+        <mustRun>
+          <includeAnnotationClasses>
+            <include>com.gradle.enterprise.testing.annotations.MustRun</include>
+          </includeAnnotationClasses>
+        </mustRun>
+      </predictiveSelection>
+    </properties>
+  </configuration>
+</plugin>
+----
+
+=== Test Distribution
+The Gradle Enterprise Gradle plugin version 3.12 or higher has built-in support for these annotations.
+
+For Gradle see https://docs.gradle.com/enterprise/test-distribution/#gradle_executor_restrictions_annotation_matcher[Local-/remote-only annotation matcher] chapter for details.
+
+[source,kotlin]
+----
+tasks.test {
+    distribution {
+        enabled.set(true)
+        localOnly {
+            includeAnnotationClasses.addAll("com.gradle.enterprise.testing.annotations.LocalOnly")
+        }
+        remoteOnly {
+            includeAnnotationClasses.addAll("com.gradle.enterprise.testing.annotations.RemoteOnly")
+        }
+    }
+}
+----
+
+The Gradle Enterprise Maven extension version 1.16 or higher has built-in support for these annotations.
+
+For Maven see the https://docs.gradle.com/enterprise/test-distribution/#maven_executor_restrictions_annotation_matcher[Local-/remote-only annotation matcher] chapter for details.
+
+[source,xml]
+----
+
+
+<plugin>
+  <artifactId>maven-surefire-plugin</artifactId>
+  <version>3.0.0-M7</version>
+  <configuration>
+    <properties>
+      <distribution>
+        <enabled>true</enabled>
+        <localOnly>
+          <includeAnnotationClasses>
+            <include>com.gradle.enterprise.testing.annotations.LocalOnly</include>
+          </includeAnnotationClasses>
+        </localOnly>
+        <remoteOnly>
+          <includeAnnotationClasses>
+            <include>com.gradle.enterprise.testing.annotations.RemoteOnly</include>
+          </includeAnnotationClasses>
+        </remoteOnly>
+      </distribution>
+    </properties>
+  </configuration>
+</plugin>
+----
+
+=== Test Retry Plugin
+See the https://github.com/gradle/test-retry-gradle-plugin#filtering[Filtering] chapter for details.
+
+==== Opt-out mode
+With this configuration every class not annotated with `@NonRetryable` will be retried if it fails.
+[source,kotlin]
+----
+tasks.test {
+    retry {
+        filter {
+            excludeAnnotationClasses.add("com.gradle.enterprise.testing.annotations.NonRetryable")
+        }
+    }
+}
+----
+
+==== Opt-in mode
+
+With this configuration only the classes annotated with `@Retryable` will be retried if they fail.
+
+[source,kotlin]
+----
+tasks.test {
+    retry {
+        filter {
+            includeAnnotationClasses.add("com.gradle.enterprise.testing.annotations.Retryable")
+        }
+    }
+}
+----
+
+==== Retry on class-level (since 1.1)
+
+By default, individual tests are retried.
+The classRetry component of the test retry extension can be used to control which test classes must be retried as a whole unit.
+Test classes still have to pass the configured filter, as this annotation does not imply `@Retryable` by default.
+
+The Test Retry Gradle plugin version 1.5.0 or higher has built-in support for `@ClassRetry`.
+
+[source,kotlin]
+----
+tasks.test {
+    retry {
+        classRetry {
+            includeAnnotationClasses.add("com.gradle.enterprise.testing.annotations.ClassRetry")
+        }
+    }
+}
+----
+
+===== Combining with Opt-in mode
+
+You can also combine configure `@ClassRetry` act as opt-in marker.
+
+[source,kotlin]
+----
+tasks.test {
+    retry {
+        filter {
+            includeAnnotationClasses.add("com.gradle.enterprise.testing.annotations.Retryable")
+            includeAnnotationClasses.add("com.gradle.enterprise.testing.annotations.ClassRetry")
+        }
+    }
+}
+----
